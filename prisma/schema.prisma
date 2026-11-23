@@ -1,0 +1,106 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------
+// Notes
+// ------------------------------------
+
+model Note {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  summary   String?
+  userId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tasks     Task[]
+  tags      Tag[]           @relation("NoteToTag")
+  embedding NoteEmbedding?
+}
+
+// ------------------------------------
+// Note Embeddings (pgvector)
+// ------------------------------------
+
+model NoteEmbedding {
+  id        String   @id @default(cuid())
+  noteId    String   @unique
+  embedding Unsupported("vector(384)")
+  createdAt DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@map("NoteEmbedding")
+}
+
+// ------------------------------------
+// Tags
+// ------------------------------------
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  notes Note[] @relation("NoteToTag")
+}
+
+// ------------------------------------
+// Tasks
+// ------------------------------------
+
+model Task {
+  id        String   @id @default(cuid())
+  title     String
+  done      Boolean  @default(false)
+  noteId    String?
+  createdAt DateTime @default(now())
+
+  note Note? @relation(fields: [noteId], references: [id])
+}
+
+// ------------------------------------
+// User Authentication
+// ------------------------------------
+
+model User {
+  id           String   @id
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions Session[]
+  notes    Note[]
+}
+
+// ------------------------------------
+// User Sessions
+// ------------------------------------
+
+model Session {
+  id        String   @id
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ------------------------------------
+// Existing vector test table
+// ------------------------------------
+
+model vector_test {
+  id        Int                    @id @default(autoincrement())
+  embedding Unsupported("vector")?
+}
