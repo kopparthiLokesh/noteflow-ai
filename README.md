@@ -1,4 +1,4 @@
-<img width="1784" height="517" alt="Screenshot (947)" src="https://github.com/user-attachments/assets/d4b8b8b9-14ad-4e98-b1df-1f7c4bb18a68" />
+<img width="2171" height="724" alt="e88e6107-1791-4240-9afe-1396531d21e0" src="https://github.com/user-attachments/assets/602473d9-92c2-4e02-ba5f-2a6abe6b7a0f" />
 
 A full-stack productivity app for managing notes and note-linked tasks,
 generating AI summaries, and finding related notes through semantic
