@@ -6,18 +6,18 @@ search.
 
 ## Features
 
--   Account registration and login with bcrypt password hashing.
--   JWT-based sessions stored in HTTP-only cookies.
--   Protected dashboard and user-specific note access.
--   Create, view, update, and delete notes.
--   Organize notes with tags and filters.
--   Generate AI summaries with the Groq API.
--   Generate 384-dimensional text embeddings with Hugging Face
-    Transformers.js.
--   Store embeddings in PostgreSQL using `pgvector`.
--   Retrieve semantically related notes using cosine distance.
+- **Authentication:** bcrypt password hashing, JWT authentication, and HTTP-only cookies.
+- **Backend Development:** Next.js Route Handlers for application APIs.
+- **Database Management:** Prisma ORM with Neon PostgreSQL.
+- **AI Integration:** Groq API for LLM-powered summarization and responses.
+- **Embedding Models:** Hugging Face Transformers.js with 384-dimensional vectors.
+- **Vector Search:** PostgreSQL pgvector with cosine-distance similarity.
+- **RAG Pipeline:** Retrieval of relevant note chunks or content followed by context injection into LLM prompts.
+- **Application State:** Zustand for client-side state management.
+- **Frontend:** Next.js App Router, React, TypeScript, and Tailwind CSS.
 
 ## Tech Stack
+
 
   Layer            Tools
   ---------------- ---------------------------------------
