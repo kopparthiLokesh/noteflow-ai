@@ -29,7 +29,9 @@ search.
 | AI Integration | Groq API |
 | Embeddings | Hugging Face Transformers.js |
 | Vector Database | PostgreSQL pgvector |
-| Authentication | bcrypt, jose, HTTP-only Cookies |
+| Semantic Search | Cosine-Distance-Based Retrieval |
+| RAG Pipeline | Context Retrieval and LLM Generation |
+| Authentication & Security | bcrypt, jose, HTTP-only Cookies |
 
 ## Screenshots
 
