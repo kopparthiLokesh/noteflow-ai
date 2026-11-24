@@ -146,7 +146,7 @@ changes, open an issue first.
 
 ## License
 
-No license has been specified. Add a `LICENSE` file before granting
+No license has been specified. Add a `MIT License` file before granting
 others permission to reuse, modify, or distribute this project.
 
 ## Author
