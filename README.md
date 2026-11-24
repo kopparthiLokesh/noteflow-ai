@@ -18,19 +18,18 @@ search.
 
 ## Tech Stack
 
-
-  Layer            Tools
-  ---------------- ---------------------------------------
-  UI               Next.js App Router, React, TypeScript
-  Styling          Tailwind CSS
-  State            Zustand
-  API              Next.js Route Handlers
-  Database         Neon PostgreSQL
-  ORM              Prisma
-  AI summaries     Groq API
-  Embeddings       Hugging Face Transformers.js
-  Vector search    PostgreSQL `pgvector`
-  Authentication   bcrypt, `jose`, HTTP-only cookies
+| Layer | Technologies |
+|---|---|
+| Frontend | Next.js App Router, React, TypeScript |
+| Styling | Tailwind CSS |
+| State Management | Zustand |
+| Backend & API | Next.js Route Handlers |
+| Database | Neon PostgreSQL |
+| ORM | Prisma |
+| AI Integration | Groq API |
+| Embeddings | Hugging Face Transformers.js |
+| Vector Database | PostgreSQL pgvector |
+| Authentication | bcrypt, jose, HTTP-only Cookies |
 
 ## Screenshots
 
