@@ -1,4 +1,5 @@
-# NoteFlow --- AI-Powered Notes & Tasks
+# NoteFlow 
+AI-Powered Notes & Task App
 
 A full-stack productivity app for managing notes and note-linked tasks,
 generating AI summaries, and finding related notes through semantic
