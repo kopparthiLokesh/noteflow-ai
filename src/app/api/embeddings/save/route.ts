@@ -1,16 +1,28 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 
 import { prisma } from "@/lib/prisma";
 import { generateEmbedding } from "@/lib/embeddings";
+import { getAuthenticatedUserId } from "@/lib/auth-session";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
+    // 1. Authenticate user
+    const userId = await getAuthenticatedUserId();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please log in." },
+        { status: 401 },
+      );
+    }
+
+    // 2. Validate request
     const body = await request.json();
     const { noteId } = body;
 
-    // Validate note ID
     if (typeof noteId !== "string" || !noteId.trim()) {
       return NextResponse.json(
         { error: "Please provide a valid noteId" },
@@ -18,9 +30,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find the note
-    const note = await prisma.note.findUnique({
-      where: { id: noteId },
+    // 3. Verify note ownership
+    const note = await prisma.note.findFirst({
+      where: {
+        id: noteId,
+        userId,
+      },
       select: {
         id: true,
         title: true,
@@ -32,7 +47,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Note not found" }, { status: 404 });
     }
 
-    // Generate embedding
+    // 4. Generate embedding
     const text = `${note.title}\n${note.content}`;
     const embedding = await generateEmbedding(text);
 
@@ -40,15 +55,14 @@ export async function POST(request: Request) {
       throw new Error("Invalid embedding dimensions");
     }
 
-    // Convert to PostgreSQL vector
     const vectorString = `[${embedding.join(",")}]`;
 
-    // Insert or update embedding
+    // 5. Save or update embedding
     await prisma.$executeRaw`
       INSERT INTO "NoteEmbedding"
         ("id", "noteId", "embedding", "createdAt")
       VALUES (
-        ${`c${crypto.randomUUID().replace(/-/g, "")}`},
+        ${`c${randomUUID().replace(/-/g, "")}`},
         ${note.id},
         ${vectorString}::vector,
         NOW()

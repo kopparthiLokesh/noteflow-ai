@@ -6,9 +6,9 @@ import { createNoteSchema } from "@/lib/validations";
 import { noteInclude, tagsConnectOrCreate } from "@/lib/notes";
 import { getAuthenticatedUserId } from "@/lib/auth-session";
 import { handleError } from "@/lib/api-error";
+import { saveNoteEmbedding } from "@/lib/embeddings";
 
 // GET /api/notes?q=text&tag=work
-// Retrieve only notes belonging to the logged-in user.
 export async function GET(request: Request) {
   try {
     const userId = await getAuthenticatedUserId();
@@ -49,7 +49,8 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/notes: create a note for the logged-in user.
+// POST /api/notes
+// Create a note and automatically generate its embedding.
 export async function POST(request: Request) {
   try {
     const userId = await getAuthenticatedUserId();
@@ -91,6 +92,13 @@ export async function POST(request: Request) {
       },
       include: noteInclude,
     });
+
+    // Automatically generate and save the note embedding.
+    try {
+      await saveNoteEmbedding(note.id, note.title, note.content);
+    } catch (embeddingError) {
+      console.error("Automatic embedding generation failed:", embeddingError);
+    }
 
     return NextResponse.json(note, { status: 201 });
   } catch (error) {

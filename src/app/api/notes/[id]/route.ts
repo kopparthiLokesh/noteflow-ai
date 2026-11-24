@@ -5,6 +5,7 @@ import { updateNoteSchema } from "@/lib/validations";
 import { noteInclude, tagsConnectOrCreate } from "@/lib/notes";
 import { getAuthenticatedUserId } from "@/lib/auth-session";
 import { handleError } from "@/lib/api-error";
+import { saveNoteEmbedding } from "@/lib/embeddings";
 
 type Context = {
   params: Promise<{ id: string }>;
@@ -46,6 +47,7 @@ export async function GET(_request: Request, { params }: Context) {
 }
 
 // PATCH /api/notes/:id
+// Update a note and regenerate its embedding when content changes.
 export async function PATCH(request: Request, { params }: Context) {
   try {
     const userId = await getAuthenticatedUserId();
@@ -78,7 +80,7 @@ export async function PATCH(request: Request, { params }: Context) {
 
     const { title, content, tags } = parsed.data;
 
-    const note = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const existingNote = await tx.note.findFirst({
         where: {
           id,
@@ -86,6 +88,8 @@ export async function PATCH(request: Request, { params }: Context) {
         },
         select: {
           id: true,
+          title: true,
+          content: true,
         },
       });
 
@@ -93,7 +97,11 @@ export async function PATCH(request: Request, { params }: Context) {
         return null;
       }
 
-      return tx.note.update({
+      const contentChanged =
+        (title !== undefined && title !== existingNote.title) ||
+        (content !== undefined && content !== existingNote.content);
+
+      const updatedNote = await tx.note.update({
         where: {
           id: existingNote.id,
         },
@@ -109,13 +117,34 @@ export async function PATCH(request: Request, { params }: Context) {
         },
         include: noteInclude,
       });
+
+      return {
+        note: updatedNote,
+        contentChanged,
+      };
     });
 
-    if (!note) {
+    if (!result) {
       return notFound();
     }
 
-    return NextResponse.json(note);
+    // Regenerate embedding only when title or content changes.
+    if (result.contentChanged) {
+      try {
+        await saveNoteEmbedding(
+          result.note.id,
+          result.note.title,
+          result.note.content,
+        );
+      } catch (embeddingError) {
+        console.error(
+          "Automatic embedding regeneration failed:",
+          embeddingError,
+        );
+      }
+    }
+
+    return NextResponse.json(result.note);
   } catch (error) {
     return handleError(error);
   }

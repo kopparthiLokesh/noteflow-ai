@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { generateEmbedding } from "@/lib/embeddings";
+import { getAuthenticatedUserId } from "@/lib/auth-session";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,17 @@ interface SearchResult {
 
 export async function POST(request: Request) {
   try {
+    // 1. Authenticate user
+    const userId = await getAuthenticatedUserId();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please log in." },
+        { status: 401 },
+      );
+    }
+
+    // 2. Validate input
     const body = await request.json();
     const { query, limit: requestedLimit } = body;
 
@@ -28,11 +40,12 @@ export async function POST(request: Request) {
 
     if (!Number.isInteger(limit) || limit < 1 || limit > 20) {
       return NextResponse.json(
-        { error: "Limit must be an integer between 1 and 20" },
+        { error: "Limit must be between 1 and 20" },
         { status: 400 },
       );
     }
 
+    // 3. Generate query embedding
     const embedding = await generateEmbedding(query.trim());
 
     if (embedding.length !== 384) {
@@ -41,6 +54,7 @@ export async function POST(request: Request) {
 
     const vectorString = `[${embedding.join(",")}]`;
 
+    // 4. Search only authenticated user's notes
     const results = await prisma.$queryRaw<SearchResult[]>`
       SELECT
         n."id",
@@ -52,6 +66,7 @@ export async function POST(request: Request) {
       FROM "NoteEmbedding" e
       INNER JOIN "Note" n
         ON n."id" = e."noteId"
+      WHERE n."userId" = ${userId}
       ORDER BY
         e."embedding" <=> ${vectorString}::vector
       LIMIT ${limit}
@@ -59,7 +74,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      query,
+      query: query.trim(),
       totalResults: results.length,
       results,
     });

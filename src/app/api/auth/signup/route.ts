@@ -14,16 +14,52 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    // 1. Parse request body
+    let body: unknown;
 
-    const name = typeof body.name === "string" ? body.name.trim() : "";
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON request body." },
+        { status: 400 },
+      );
+    }
+
+    if (!body || typeof body !== "object") {
+      return NextResponse.json(
+        { error: "Invalid request body." },
+        { status: 400 },
+      );
+    }
+
+    const data = body as Record<string, unknown>;
+
+    const name = typeof data.name === "string" ? data.name.trim() : "";
+
     const email =
-      typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    const password = typeof body.password === "string" ? body.password : "";
+      typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
 
+    const password = typeof data.password === "string" ? data.password : "";
+
+    // 2. Validate required fields
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: "Name, email, and password are required." },
+        { status: 400 },
+      );
+    }
+
+    if (name.length > 100) {
+      return NextResponse.json(
+        { error: "Name must not exceed 100 characters." },
+        { status: 400 },
+      );
+    }
+
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json(
+        { error: "Please provide a valid email address." },
         { status: 400 },
       );
     }
@@ -35,8 +71,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // 3. Check existing user
     const existingUser = await prisma.user.findUnique({
       where: { email },
+      select: { id: true },
     });
 
     if (existingUser) {
@@ -46,8 +84,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // 4. Hash password
     const passwordHash = await hashPassword(password);
 
+    // 5. Create user
     const userId = `c${randomUUID().replace(/-/g, "")}`;
 
     const user = await prisma.user.create({
@@ -64,11 +104,15 @@ export async function POST(request: Request) {
       },
     });
 
+    // 6. Generate session token
     const sessionToken = await createSessionToken(user.id);
+
+    // 7. Hash token for database storage
     const tokenHash = hashSessionToken(sessionToken);
 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
+    // 8. Create database session
     await prisma.session.create({
       data: {
         id: `c${randomUUID().replace(/-/g, "")}`,
@@ -78,9 +122,10 @@ export async function POST(request: Request) {
       },
     });
 
-    const signedToken = await createSessionToken(user.id);
-    await setSessionCookie(signedToken);
+    // 9. Set the SAME token as the HTTP-only cookie
+    await setSessionCookie(sessionToken);
 
+    // 10. Return successful response
     return NextResponse.json(
       {
         success: true,

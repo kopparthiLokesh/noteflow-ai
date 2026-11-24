@@ -1,71 +1,62 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import {
-  getSessionCookie,
-  verifySessionToken,
-  hashSessionToken,
-} from "@/lib/session";
+import { getAuthenticatedUserId } from "@/lib/auth-session";
 
 export const runtime = "nodejs";
 
+// GET /api/auth/me
+// Retrieve the currently authenticated user.
 export async function GET() {
   try {
-    const token = await getSessionCookie();
+    // 1. Verify JWT and database session
+    const userId = await getAuthenticatedUserId();
 
-    if (!token) {
+    if (!userId) {
       return NextResponse.json(
-        { authenticated: false, error: "Not logged in" },
+        {
+          authenticated: false,
+          error: "Not authenticated. Please log in.",
+        },
         { status: 401 },
       );
     }
 
-    const payload = await verifySessionToken(token);
-
-    if (!payload) {
-      return NextResponse.json(
-        { authenticated: false, error: "Invalid session" },
-        { status: 401 },
-      );
-    }
-
-    const tokenHash = hashSessionToken(token);
-
-    const session = await prisma.session.findFirst({
+    // 2. Retrieve authenticated user details
+    const user = await prisma.user.findUnique({
       where: {
-        tokenHash,
-        userId: payload.userId,
-        expiresAt: {
-          gt: new Date(),
-        },
+        id: userId,
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+      select: {
+        id: true,
+        name: true,
+        email: true,
       },
     });
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json(
-        { authenticated: false, error: "Session expired or not found" },
+        {
+          authenticated: false,
+          error: "User not found.",
+        },
         { status: 401 },
       );
     }
 
+    // 3. Return authenticated user
     return NextResponse.json({
       authenticated: true,
-      user: session.user,
+      user,
     });
   } catch (error) {
     console.error("Get current user error:", error);
 
     return NextResponse.json(
-      { error: "Unable to retrieve current user" },
+      {
+        authenticated: false,
+        error: "Unable to retrieve current user.",
+      },
       { status: 500 },
     );
   }
